@@ -56,6 +56,7 @@ include("layouting/boundingbox.jl")
 include("basic_recipes/buffers.jl")
 include("basic_recipes/axis.jl")
 include("basic_recipes/legend.jl")
+include("basic_recipes/title.jl")
 
 # Interactiveness
 include("interaction/events.jl")
@@ -75,6 +76,7 @@ export AbstractPlot, Combined, Atomic, Axis
 
 # Theming, working with Plots
 export Attributes, Theme, attributes, default_theme, theme, set_theme!
+export title
 
 # Node/Signal related
 export Node, node, lift, map_once, to_value, on
@@ -113,7 +115,7 @@ export unicode_input
 export dropped_files
 export hasfocus
 export entered_window
-export disconnect!, must_update, force_update!, update!
+export disconnect!, must_update, force_update!, update!, update_limits!
 
 
 # gui
