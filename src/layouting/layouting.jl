@@ -165,6 +165,12 @@ estimated_space(x, N, w) = 1/N
 ispixelcam(x::Union{PixelCamera, Camera2D}) = true
 ispixelcam(x) = false
 
+"""
+    vbox(scenes...; parent = Scene(clear = false), kwargs...)
+
+Lay the given Scenes out on the vertical axis.  For example, two Scenes `vbox`ed
+will be placed side-by-side.
+"""
 vbox(plots::Transformable...; kw_args...) = vbox([plots...]; kw_args...)
 hbox(plots::Transformable...; kw_args...) = hbox([plots...]; kw_args...)
 
@@ -207,6 +213,7 @@ function layout(plots::Vector{T}, dim; parent = Scene(clear = false), sizes = no
             resize!(p, IRect(minimum(a) .+ (mask .* last), new_w))
         end
         push!(parent.children, p)
+        p.parent = parent
         nodes = map(fieldnames(Events)) do field
             if field != :window_area
                 connect!(getfield(parent.events, field), getfield(p.events, field))
