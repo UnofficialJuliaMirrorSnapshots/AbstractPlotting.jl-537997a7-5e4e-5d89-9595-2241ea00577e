@@ -1,24 +1,42 @@
 to_func_name(x::Symbol) = string(x) |> lowercase |> Symbol
 
 """
-     default_plot_signatures(funcname, PlotType)
+     default_plot_signatures(funcname, funcname!, PlotType)
 Creates all the different overloads for `funcname` that need to be supported for the plotting frontend!
 Since we add all these signatures to different functions, we make it reusable with this function.
 The `Core.@__doc__` macro transfers the docstring given to the Recipe into the functions.
 """
 function default_plot_signatures(funcname, funcname!, PlotType)
     quote
-        Core.@__doc__ ($funcname)(args...; attributes...) = plot!(Scene(), $PlotType, Attributes(attributes), args...)
 
-        Core.@__doc__ ($funcname!)(args...; attributes...) = plot!(current_scene(), $PlotType, Attributes(attributes), args...)
+        Core.@__doc__ function ($funcname)(args...; attributes...)
+            attr = Attributes(attributes)
+            kw = extract_scene_attributes!(attr)
+            plot!(Scene(;kw...), $PlotType, attr, args...)
+        end
 
-                      ($funcname!)(scene::SceneLike, args...; attributes...) = plot!(scene, $PlotType, Attributes(attributes), args...)
 
-                      ($funcname)(attributes::Attributes, args...; kw_attributes...) = plot!(Scene(), $PlotType, merge!(Attributes(kw_attributes), attributes), args...)
+        Core.@__doc__ function ($funcname!)(args...; attributes...)
+            plot!(current_scene(), $PlotType, Attributes(attributes), args...)
+        end
 
-                      ($funcname!)(attributes::Attributes, args...; kw_attributes...) = plot!(current_scene(), $PlotType, merge!(Attributes(kw_attributes), attributes), args...)
+        function ($funcname!)(scene::SceneLike, args...; attributes...)
+            plot!(scene, $PlotType, Attributes(attributes), args...)
+        end
 
-                      ($funcname!)(scene::SceneLike, attributes::Attributes, args...; kw_attributes...) = plot!(scene, $PlotType, merge!(Attributes(kw_attributes), attributes), args...)
+        function ($funcname)(attributes::Attributes, args...; kw_attributes...)
+            merged = merge!(Attributes(kw_attributes), attributes)
+            kw = extract_scene_attributes!(merged)
+            plot!(Scene(;kw...), $PlotType, merged, args...)
+        end
+
+        function ($funcname!)(attributes::Attributes, args...; kw_attributes...)
+            plot!(current_scene(), $PlotType, merge!(Attributes(kw_attributes), attributes), args...)
+        end
+
+        function ($funcname!)(scene::SceneLike, attributes::Attributes, args...; kw_attributes...)
+            plot!(scene, $PlotType, merge!(Attributes(kw_attributes), attributes), args...)
+        end
     end
 end
 
@@ -91,9 +109,9 @@ will provide `plot_object[:arg1]` etc.
 
 The theme given in the body of the `@recipe` invocation is inserted into a
 specialization of `default_theme` which inserts the theme into any scene that
-plots `Myplot`:
+plots `MyPlot`:
 
-    function default_theme(scene, ::Myplot)
+    function default_theme(scene, ::MyPlot)
         Theme(
             plot_color => :red
         )
@@ -139,7 +157,7 @@ macro recipe(theme_func, Tsym::Symbol, args::Symbol...)
         export $PlotType, $funcname, $funcname!
     end
     if !isempty(args)
-        push!(expr.args, :($(esc(:argument_names))(::Type{<: $PlotType}, len::Integer) = $args))
+        push!(expr.args, :($(esc(:(AbstractPlotting.argument_names)))(::Type{<: $PlotType}, len::Integer) = $args))
     end
     expr
 end

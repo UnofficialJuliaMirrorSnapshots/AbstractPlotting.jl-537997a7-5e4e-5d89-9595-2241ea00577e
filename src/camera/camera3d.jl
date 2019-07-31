@@ -16,8 +16,15 @@ struct Camera3D <: AbstractCamera
     move_key::Node{ButtonTypes}
 end
 
+"""
+    cam3d_cad!(scene; kw_args...)
+
+Creates a 3D camera for `scene` which rotates around
+the _viewer_'s "up" axis - similarly to how it's done
+in CAD software cameras.
+"""
 function cam3d_cad!(scene; kw_args...)
-    cam_attributes, rest = merged_get!(:cam3d, scene, Attributes(kw_args)) do
+    cam_attributes = merged_get!(:cam3d, scene, Attributes(kw_args)) do
         Theme(
             rotationspeed = 0.3,
             translationspeed = 1.0,
@@ -46,8 +53,14 @@ function cam3d_cad!(scene; kw_args...)
     cam
 end
 
+"""
+    cam3d_turntable!(scene; kw_args...)
+
+Creates a 3D camera for `scene`, which rotates around
+the plot's axis.
+"""
 function cam3d_turntable!(scene; kw_args...)
-    cam_attributes, rest = merged_get!(:cam3d, scene, Attributes(kw_args)) do
+    cam_attributes = merged_get!(:cam3d, scene, Attributes(kw_args)) do
         Theme(
             rotationspeed = 0.3,
             translationspeed = 1.0,
@@ -76,6 +89,13 @@ function cam3d_turntable!(scene; kw_args...)
     cam
 end
 
+"""
+    cam3d!(scene; kwargs...)
+
+An alias to [`cam3d_turntable!`](@ref).
+Creates a 3D camera for `scene`, which rotates around
+the plot's axis.
+"""
 const cam3d! = cam3d_turntable!
 
 function projection_switch(
@@ -158,6 +178,11 @@ function add_rotation!(scene, cam, button, key, fixed_axis::Bool)
     end
 end
 
+"""
+    translate_cam!(scene::Scene. translation::VecTypes)
+
+Translate the camera to the given coordinates.
+"""
 translate_cam!(scene::Scene, translation::VecTypes) = translate_cam!(scene, cameracontrols(scene), translation)
 function translate_cam!(scene::Scene, cam::Camera3D, _translation::VecTypes)
     translation = Vec3f0(_translation)
@@ -208,7 +233,12 @@ function zoom!(scene, point, zoom_step, shift_lookat::Bool)
     update_cam!(scene, cam)
 end
 
+"""
+    rotate_cam!(scene::Scene, theta_v::Number...)
+    rotate_cam!(scene::Scene, theta_v::VecTypes)
 
+Rotate the camera of the Scene by the given rotation.
+"""
 rotate_cam!(scene::Scene, theta_v::Number...) = rotate_cam!(scene, cameracontrols(scene), theta_v)
 rotate_cam!(scene::Scene, theta_v::VecTypes) = rotate_cam!(scene, cameracontrols(scene), theta_v)
 function rotate_cam!(scene::Scene, cam::Camera3D, _theta_v::VecTypes, fixed_axis::Bool = true)
@@ -252,8 +282,9 @@ function update_cam!(scene::Scene, camera::Camera3D, area3d::Rect)
     half_width = width/2f0
     lower_corner = minimum(bb)
     middle = maximum(bb) - half_width
+    old_dir = normalize(eyeposition .- lookat)
     camera.lookat[] = middle
-    neweyepos = middle + 1.2width
+    neweyepos = middle .+ (1.2*norm(width) .* old_dir)
     camera.eyeposition[] = neweyepos
     camera.upvector[] = Vec3f0(0,0,1)
     camera.near[] = 0.1f0 * norm(widths(bb))
@@ -262,6 +293,11 @@ function update_cam!(scene::Scene, camera::Camera3D, area3d::Rect)
     return
 end
 
+"""
+    update_cam!(scene::Scene, eyeposition, lookat, up = Vec3f0(0, 0, 1))
+
+Updates the camera's controls to point to the specified location.
+"""
 update_cam!(scene::Scene, eyeposition, lookat, up = Vec3f0(0, 0, 1)) = update_cam!(scene, cameracontrols(scene), eyeposition, lookat, up)
 
 function update_cam!(scene::Scene, camera::Camera3D, eyeposition, lookat, up = Vec3f0(0, 0, 1))

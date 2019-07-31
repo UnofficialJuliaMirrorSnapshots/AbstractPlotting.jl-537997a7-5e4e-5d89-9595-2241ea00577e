@@ -1,5 +1,8 @@
-# this is a bit of a weird name, but all scenes and plots are transformable
-# so that's what they all have in common. This might be better expressed as traits
+"""
+    abstract type Transformable
+This is a bit of a weird name, but all scenes and plots are transformable,
+so that's what they all have in common. This might be better expressed as traits.
+"""
 abstract type Transformable end
 
 abstract type AbstractPlot{Typ} <: Transformable end
@@ -14,7 +17,13 @@ abstract type AbstractCamera end
 # placeholder if no camera is present
 struct EmptyCamera <: AbstractCamera end
 
-@enum RaymarchAlgorithm IsoValue Absorption MaximumIntensityProjection AbsorptionRGBA IndexedAbsorptionRGBA
+@enum RaymarchAlgorithm begin
+    IsoValue
+    Absorption
+    MaximumIntensityProjection
+    AbsorptionRGBA
+    IndexedAbsorptionRGBA
+end
 
 const RealVector{T} = AbstractVector{T} where T <: Number
 
@@ -143,20 +152,58 @@ const Node = Observable
 
 include("interaction/iodevices.jl")
 
+"""
+This struct provides accessible `Observable`s to monitor the events
+associated with a Scene.
+
+## Fields
+$(TYPEDFIELDS)
+"""
 struct Events
+    """
+    The area of the window in pixels, as an [`IRect2D`](@ref).
+    """
     window_area::Node{IRect2D}
+    """
+    The DPI resolution of the window, as a `Float64`.
+    """
     window_dpi::Node{Float64}
+    """
+    The state of the window (open => true, closed => false).
+    """
     window_open::Node{Bool}
 
+    """
+    The pressed mouse buttons.
+    Updates when a mouse button is pressed.
+
+    See also [`ispressed`](@ref).
+    """
     mousebuttons::Node{Set{Mouse.Button}}
+    """
+    The position of the mouse as a [`Point2`](@ref).
+    Updates whenever the mouse moves.
+    """
     mouseposition::Node{Point2d{Float64}}
+    """
+    The
+    """
     mousedrag::Node{Mouse.DragEnum}
+    """
+    The direction of scroll
+    """
     scroll::Node{Vec2d{Float64}}
 
+    """
+    See also [`ispressed`](@ref).
+    """
     keyboardbuttons::Node{Set{Keyboard.Button}}
 
     unicode_input::Node{Vector{Char}}
     dropped_files::Node{Vector{String}}
+    """
+    Whether the Scene window is in focus or not.
+    """
     hasfocus::Node{Bool}
     entered_window::Node{Bool}
 end
@@ -181,6 +228,8 @@ function Events()
     )
 end
 
+"""
+"""
 mutable struct Camera
     view::Node{Mat4f0}
     projection::Node{Mat4f0}
@@ -190,6 +239,12 @@ mutable struct Camera
     steering_nodes::Vector{Any}
 end
 
+"""
+Holds the transformations for Scenes.
+
+## Fields
+$(TYPEDFIELDS)
+"""
 struct Transformation <: Transformable
     parent::RefValue{Transformable}
     translation::Node{Vec3f0}
@@ -230,32 +285,43 @@ value_convert(x::NamedTuple) = Attributes(x)
 
 node_pairs(pair::Union{Pair, Tuple{Any, Any}}) = (pair[1] => to_node(Any, value_convert(pair[2]), pair[1]))
 node_pairs(pairs) = (node_pairs(pair) for pair in pairs)
-Base.convert(::Type{<: Node}, x) = Node(x)
+Base.convert(::Type{<: Node}, x) = to_node(Any, x)
 Base.convert(::Type{T}, x::T) where T <: Node = x
+Base.convert(::Type{Node{T}}, x::Node) where T = to_node(T, x)
 
 Attributes(; kw_args...) = Attributes(Dict{Symbol, Node}(node_pairs(kw_args)))
 Attributes(pairs::Pair...) = Attributes(Dict{Symbol, Node}(node_pairs(pairs)))
 Attributes(pairs::AbstractVector) = Attributes(Dict{Symbol, Node}(node_pairs.(pairs)))
 Attributes(pairs::Iterators.Pairs) = Attributes(collect(pairs))
 Attributes(nt::NamedTuple) = Attributes(; nt...)
-
+attributes(x::Attributes) = getfield(x, :attributes)
 Base.keys(x::Attributes) = keys(x.attributes)
 Base.values(x::Attributes) = values(x.attributes)
-Base.iterate(x::Attributes) = iterate(x.attributes)
-Base.iterate(x::Attributes, state) = iterate(x.attributes, state)
-Base.copy(x::Attributes) = Attributes(copy(x.attributes))
-Base.filter(f, x::Attributes) = Attributes(filter(f, x.attributes))
-Base.empty!(x::Attributes) = (empty!(x.attributes); x)
-Base.length(x::Attributes) = length(x.attributes)
-
-function Base.merge!(x::Attributes...)
-    ret = x[1]
-    for i in 2:length(x)
-        merge_attributes_doublebang!(x[i], ret)
-    end
-    ret
+function Base.iterate(x::Attributes, state...)
+    s = iterate(keys(x), state...)
+    s === nothing && return nothing
+    return (s[1] => x[s[1]], s[2])
 end
-Base.merge(x::Attributes...) = merge!(copy.(x)...)
+
+function Base.copy(attributes::Attributes)
+    result = Attributes()
+    for (k, v) in attributes
+        # We need to create a new Signal to have a real copy
+        result[k] = copy(v)
+    end
+    return result
+end
+Base.filter(f, x::Attributes) = Attributes(filter(f, attributes(x)))
+Base.empty!(x::Attributes) = (empty!(attributes(x)); x)
+Base.length(x::Attributes) = length(attributes(x))
+
+function Base.merge!(target::Attributes, args::Attributes...)
+    for elem in args
+        merge_attributes!(target, elem)
+    end
+    return target
+end
+Base.merge(target::Attributes, args::Attributes...) = merge!(copy(target), args...)
 
 @generated hasfield(x::T, ::Val{key}) where {T, key} = :($(key in fieldnames(T)))
 
@@ -276,8 +342,8 @@ end
 
 
 function getindex(x::Attributes, key::Symbol)
-    x = x.attributes[key]
-    to_value(x) isa Attributes ? to_value(x) : x
+    x = attributes(x)[key]
+    x[] isa Attributes ? x[] : x
 end
 
 function setindex!(x::Attributes, value, key::Symbol)
@@ -294,12 +360,25 @@ function setindex!(x::Attributes, value::Node, key::Symbol)
         # You can do this manually like this:
         # lift(val-> attributes[$key] = val, node::$(typeof(value)))
         # ")
-        return x.attributes[key] = value
+        return x.attributes[key] = to_node(Any, value)
     else
         #TODO make this error. Attributes should be sort of immutable
-        return x.attributes[key] = value
+        return x.attributes[key] = to_node(Any, value)
     end
+    return x
 end
+
+function Base.show(io::IO,::MIME"text/plain", attr::Attributes)
+
+    d = Dict()
+    for p in pairs(attr.attributes)
+        d[p.first] = to_value(p.second)
+    end
+    show(IOContext(io, :limit => false), MIME"text/plain"(), d)
+
+end
+
+Base.show(io::IO, attr::Attributes) = show(io, MIME"text/plain"(), attr)
 
 struct Combined{Typ, T} <: ScenePlot{Typ}
     parent::SceneLike

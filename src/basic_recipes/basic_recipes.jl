@@ -6,14 +6,16 @@
 Plots a polygon based on the arguments given.
 When vertices and indices are given, it functions similarly to `mesh`.
 When points are given, it draws one polygon that connects all the points in order.
-When a shape is given (essentially anything decomposable by `GeometryTypes`),
-it will plot `decompose(shape)`.
+When a shape is given (essentially anything decomposable by `GeometryTypes`), it will plot `decompose(shape)`.
 
     poly(coordinates, connectivity; kwargs...)
 
 Plots polygons, which are defined by
 `coordinates` (the coordinates of the vertices) and
 `connectivity` (the edges between the vertices).
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Poly) do scene
     Theme(;
@@ -158,6 +160,9 @@ specifications for a grid, and `u, v` are plotted as arrows along the
 grid.
 
 `arrows` can also work in three dimensions.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Arrows, points, directions) do scene
     theme = Theme(
@@ -218,6 +223,9 @@ end
     `wireframe(x, y, z)`, `wireframe(positions)`, or `wireframe(mesh)`
 
 Draws a wireframe, either interpreted as a surface or as a mesh.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Wireframe) do scene
     default_theme(scene, LineSegments)
@@ -235,11 +243,6 @@ xvector(x::AbstractMatrix, len) = x
 yvector(x, len) = xvector(x, len)'
 yvector(x::AbstractMatrix, len) = x
 
-"""
-    `wireframe(x, y, z)`, `wireframe(positions)`, or `wireframe(mesh)`
-
-Draws a wireframe, either interpreted as a surface or as a mesh.
-"""
 function plot!(plot::Wireframe{<: Tuple{<: Any, <: Any, <: AbstractMatrix}})
     points_faces = lift(plot[1:3]...) do x, y, z
         T = eltype(z); M, N = size(z)
@@ -282,6 +285,9 @@ end
 
 TODO add function signatures
 TODO add descripton
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(StreamLines, points, directions) do scene
     Theme(
@@ -315,7 +321,10 @@ end
     Series - ?
 
 TODO add function signatures
-TODO add descripton
+TODO add description
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Series, series) do scene
     Theme(
@@ -363,6 +372,9 @@ end
     `annotations(strings::Vector{String}, positions::Vector{Point})`
 
 Plots an array of texts at each position in `positions`.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Annotations, text, position) do scene
     default_theme(scene, Text)
@@ -432,8 +444,6 @@ function plot!(plot::Annotations)
     plot
 end
 
-is2d(scene::SceneLike) = widths(limits(scene)[])[3] == 0.0
-
 """
     arc(origin, radius, start_angle, stop_angle; kwargs...)
 
@@ -447,6 +457,8 @@ Examples:
 `arc(Point2f0(0), 1, 0.0, π)`
 `arc(Point2f0(1, 2), 0.3. π, -π)`
 
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Arc, origin, radius, start_angle, stop_angle) do scene
     Theme(;
@@ -476,6 +488,9 @@ end
     barplot(x, y; kwargs...)
 
 Plots a barplot; `y` defines the height.  `x` and `y` should be 1 dimensional.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(BarPlot, x, y) do scene
     Theme(;
@@ -553,6 +568,9 @@ end
 
 Plots `lines` between sets of x and y coordinates provided,
 as well as plotting those points using `scatter`.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(ScatterLines) do scene
     merge(default_theme(scene, Scatter), default_theme(scene, Lines))
@@ -568,6 +586,9 @@ end
     band(x, ylower, yupper; kwargs...)
 
 Plots a band from `ylower` to `yupper` along `x`.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Band, x, ylower, yupper) do scene
     Theme(;
@@ -618,6 +639,9 @@ export fill_between!
 """
     contour(x, y, z)
 Creates a contour plot of the plane spanning x::Vector, y::Vector, z::Matrix
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Contour) do scene
     default = default_theme(scene)
@@ -636,7 +660,10 @@ end
 """
     contour3d(x, y, z)
 Creates a 3D contour plot of the plane spanning x::Vector, y::Vector, z::Matrix,
-with z-elevation for each level
+with z-elevation for each level.
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(Contour3d) do scene
     default_theme(scene, Contour)
@@ -796,6 +823,9 @@ end
 
 TODO add function signatures
 TODO add descripton
+
+## Theme
+$(ATTRIBUTES)
 """
 @recipe(VolumeSlices, x, y, z, volume) do scene
     Theme(
@@ -854,7 +884,7 @@ end
 """
     showgradients(
         cgrads::AbstractVector{Symbol};
-        h = 0.0, offset = 0.2, textsize = 0.7, 
+        h = 0.0, offset = 0.2, textsize = 0.7,
         resolution = (800, length(cgrads) * 84)
     )::Scene
 
@@ -900,4 +930,188 @@ function showgradients(
 
     scene
 
+end
+
+
+"""
+    timeseries(x::Node{{Union{Number, Point2}}})
+
+Plots a sampled signal.
+Usage:
+```julia
+signal = Node(1.0)
+scene = timeseries(signal)
+display(scene)
+# @async is optional, but helps to continue evaluating more code
+@async while isopen(scene)
+    # aquire data from e.g. a sensor:
+    data = rand()
+    # update the signal
+    signal[] = data
+    # sleep/ wait for new data/ whatever...
+    # It's important to yield here though, otherwise nothing will be rendered
+    sleep(1/30)
+end
+
+```
+"""
+@recipe(TimeSeries, signal) do scene
+    Theme(
+        history = 100;
+        default_theme(scene, Lines)...
+    )
+end
+
+signal2point(signal::Number, start) = Point2f0(time() - start, signal)
+signal2point(signal::Point2, start) = signal
+signal2point(signal, start) = error(""" Signal needs to be of type Number or Point.
+Found: $(typeof(signal))
+""")
+
+
+function AbstractPlotting.plot!(plot::TimeSeries)
+    # normal plotting code, building on any previously defined recipes
+    # or atomic plotting operations, and adding to the combined `plot`:
+    points = Node(fill(Point2f0(NaN), plot.history[]))
+    buffer = copy(points[])
+    lines!(plot, points)
+    start = time()
+    on(plot.signal) do x
+        points[][end] = signal2point(x, start)
+        circshift!(buffer, points[], 1)
+        buff_ref = buffer
+        buffer = points[]
+        points[] = buff_ref
+        update!(parent(plot))
+    end
+    plot
+end
+
+"""
+    streamplot(
+        f::function, -1.5..1.5, -1.5..1.5;
+        stepsize = 0.01,
+        resolution = (32, 32),
+        colormap = theme(scene, :colormap),
+        arrow_size = 0.03
+    )
+    f must either accept `f(::Point)` or `f(x::Number, y::Number)`.
+    f must return a Point2.
+    Example:
+    ```julia
+    using MakieGallery, Makie
+    run_example("streamplot")
+    ```
+
+"""``
+@recipe(StreamPlot, f, xrange, yrange) do scene
+    Theme(
+        stepsize = 0.01,
+        resolution = (32, 32),
+        colormap = theme(scene, :colormap),
+        arrow_size = 0.03
+    )
+end
+
+function AbstractPlotting.convert_arguments(::Type{<: StreamPlot}, f::Function, x, y)
+    (f, x, y)
+end
+
+"""
+Code adapted from an example implementation by Moritz Schauer (@mschauer)
+from https://github.com/JuliaPlots/Makie.jl/issues/355#issuecomment-504449775
+"""
+function streamplot_impl(CallType, f, xrange, yrange, resolution, stepsize)
+    mask = trues(resolution)
+    arrow_pos = Point2f0[]
+    arrow_dir = Vec2f0[]
+    line_points = Point2f0[]
+    colors = Float64[]
+    line_colors = Float64[]
+    xmin, xmax = extrema(xrange)
+    ymin, ymax = extrema(yrange)
+    limits = Rect(xmin, ymin, xmax - xmin, ymax - ymin)
+    dt = Point2f0(to2tuple(stepsize))
+    r = (
+        LinRange(xmin, xmax, resolution[1] + 1),
+        LinRange(ymin, ymax, resolution[2] + 1)
+    )
+    apply_f(x0, P) = if P <: Point
+        f(x0)
+    else
+        f(x0[1], x0[2])
+    end
+    for c in CartesianIndices(mask)
+        i0, j0 = Tuple(c)
+        x0 = Point2(
+            first(r[1]) + (i0 - 0.5) * step(r[1]),
+            first(r[2]) + (j0 - 0.5) * step(r[1])
+        )
+        if mask[c]
+            point = apply_f(x0, CallType)
+            if !(point isa Point2)
+                error("Function passed to streamplot must return Point2")
+            end
+            pnorm = norm(point)
+            push!(arrow_pos, x0)
+            push!(arrow_dir, point / pnorm)
+            push!(colors, pnorm)
+            mask[c] == false
+            for d in (-1, 1)
+                n_linepoints = 1
+                x = x0
+                push!(line_points, Point2f0(NaN), x)
+                push!(line_colors, 0.0, pnorm)
+                i0, j0 = Tuple(c)
+                while x in limits && n_linepoints < 500
+                    point = apply_f(x, CallType)
+                    pnorm = norm(point)
+                    x = x .+ d .* dt .* point ./ pnorm
+                    if !(x in limits)
+                        break
+                    end
+                    i = searchsortedlast(r[1], x[1])
+                    j = searchsortedlast(r[2], x[2])
+                    if (i, j) != (i0, j0)
+                        if !mask[i,j]
+                            break
+                        end
+                        mask[i, j] = false
+                        i0, j0 = i, j
+                    end
+                    push!(line_points, x)
+                    push!(line_colors, pnorm)
+                    n_linepoints += 1
+                end
+            end
+        end
+    end
+    return (
+        arrow_pos,
+        arrow_dir,
+        line_points,
+        colors,
+        line_colors,
+    )
+end
+
+function AbstractPlotting.plot!(p::StreamPlot)
+    data = lift(p.f, p.xrange, p.yrange, p.resolution, p.stepsize) do f, xrange, yrange, resolution, stepsize
+        P = if applicable(f, Point2f0(0))
+            Point
+        else
+            Number
+        end
+        streamplot_impl(P, f, xrange, yrange, resolution, stepsize)
+    end
+    lines!(
+        p,
+        lift(x->x[3], data), color = lift(last, data), colormap = p.colormap
+    )
+    scatter!(
+        p,
+        lift(first, data), markersize = p.arrow_size, marker = '▲',
+        color = lift(x-> x[4], data), rotations = lift(x-> x[2], data),
+        colormap = p.colormap,
+    )
 end

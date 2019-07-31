@@ -39,6 +39,11 @@ function text_bb(str, font, size)
 end
 
 """
+    move_from_touch(
+        parent::GeometryPrimitive{N, T}, child::GeometryPrimitive{N},
+        pad::Vec{N}
+    ) where {N, T}
+
 calculates how much `child` rectangle needs to move to not touch the `parent`
 """
 function move_from_touch(
@@ -57,6 +62,11 @@ function move_from_touch(
 end
 
 """
+    dont_touch(
+        parent::GeometryPrimitive{N}, child::GeometryPrimitive{N},
+        pad::Vec{N}
+    ) where N
+
 Moves `child` so that it doesn't touch parent. Leaves a gap to parent defined by `pad`.
 """
 function dont_touch(
@@ -65,8 +75,6 @@ function dont_touch(
     ) where N
     child + move_from_touch(parent, child, pad)
 end
-
-
 
 """
     fit_factor_stretch(rect, lims::NTuple{N}) where N
@@ -172,6 +180,12 @@ Lay the given Scenes out on the vertical axis.  For example, two Scenes `vbox`ed
 will be placed side-by-side.
 """
 vbox(plots::Transformable...; kw_args...) = vbox([plots...]; kw_args...)
+"""
+    hbox(scenes...; parent = Scene(clear = false), kwargs...)
+
+Lay the given Scenes out on the horizonral axis.  For example, two Scenes `vbox`ed
+will be placed side-by-side.
+"""
 hbox(plots::Transformable...; kw_args...) = hbox([plots...]; kw_args...)
 
 function hbox(plots::Vector{T}; parent = Scene(clear = false), kw_args...) where T <: Scene
@@ -185,7 +199,11 @@ function to_sizes(x::AbstractVector{<: Number}, widths, dim)
     x .* widths[dim]
 end
 
-function layout(plots::Vector{T}, dim; parent = Scene(clear = false), sizes = nothing, kw_args...) where T <: Scene
+function layout(
+        plots::Vector{T}, dim;
+        parent = Scene(clear = false), sizes = nothing, kw_args...
+    ) where T <: Scene
+
     N = length(plots)
     w = 0.0
     area = pixelarea(parent)
@@ -226,7 +244,6 @@ end
 
 
 otherdim(dim) = dim == 1 ? 2 : 1
-
 
 function scaled_width(bb, other_size, dim)
     wh = widths(bb)
@@ -304,7 +321,6 @@ function layout_sizes(scenes, size, dim)
     # end
     sizes
 end
-
 
 function vbox!(plots::Vector{T}; kw_args...) where T <: AbstractPlot
     N = length(plots)

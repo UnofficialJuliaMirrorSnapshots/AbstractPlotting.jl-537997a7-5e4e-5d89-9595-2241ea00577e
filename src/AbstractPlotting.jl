@@ -3,7 +3,7 @@ module AbstractPlotting
 using FFMPEG # get FFMPEG on any system!
 using Observables, GeometryTypes, StaticArrays, ColorTypes, Colors, IntervalSets, PlotUtils
 using ColorBrewer, FixedPointNumbers, Packing, SignedDistanceFields
-using Markdown # documentation
+using Markdown, DocStringExtensions # documentation
 using Serialization # serialize events
 using StructArrays
 # Text related packages
@@ -23,6 +23,8 @@ end
 using .ContoursHygiene
 const Contours = ContoursHygiene.Contour
 
+include("documentation/docstringextension.jl")
+
 include("utilities/quaternions.jl")
 include("types.jl")
 include("utilities/utilities.jl")
@@ -36,6 +38,7 @@ include("theming.jl")
 include("recipes.jl")
 include("interfaces.jl")
 include("conversions.jl")
+include("shorthands.jl")
 
 # camera types + functions
 include("camera/projection_math.jl")
@@ -78,6 +81,8 @@ export AbstractPlot, Combined, Atomic, Axis
 # Theming, working with Plots
 export Attributes, Theme, attributes, default_theme, theme, set_theme!
 export title
+export xlims!, ylims!, zlims!
+export xlabel!, ylabel!, zlabel!
 
 # Node/Signal related
 export Node, node, lift, map_once, to_value, on
@@ -93,12 +98,12 @@ export to_ndim, Reverse
 
 # Transformations
 export translated, translate!, transform!, scale!, rotate!, grid, Accum, Absolute
-export boundingbox, insertplots!, center!, translation
+export boundingbox, insertplots!, center!, translation, scene_limits
 export hbox, vbox
 
 # camera related
 export AbstractCamera, EmptyCamera, Camera, Camera2D, Camera3D, cam2d!, cam2d
-export campixel!, campixel, cam3d!, cam3d_cad!, update_cam!, rotate_cam!, translate_cam!
+export campixel!, campixel, cam3d!, cam3d_cad!, update_cam!, rotate_cam!, translate_cam!, zoom!
 export pixelarea, plots, cameracontrols, cameracontrols!, camera, events
 export to_world
 
