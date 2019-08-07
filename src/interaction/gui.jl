@@ -30,15 +30,22 @@ julia> -5:5 .|> exp .|> sig_printer
 sig_printer(v::Real) = @sprintf "%0.2e" v
 
 """
-    Slider
+    slider(range; kwargs...)
 
-TODO add function signatures
-TODO add description
+Creates a slider which slides through the selected range; sliders are discrete.
+The Slider's value can be accessed through its `value` field.  For example:
+
+```julia
+scene = slider(1:10)
+lift(scene[end].value) do val
+    # your function here
+end
+```
 
 ## Theme
 $(ATTRIBUTES)
 """
-@recipe(Slider) do scene
+@recipe(Slider, range) do scene
     Theme(
         value = 0,
         start = automatic,
@@ -152,6 +159,11 @@ function dragslider(slider, button)
     end
 end
 
+"""
+    move!(slider::Slider, idx::Integer)
+
+Moves the slider to the position of slider.range[idx].
+"""
 function move!(x::Slider, idx::Integer)
     r = x[1][]
     len = x[:sliderlength][] - x[:buttonsize][]
@@ -161,13 +173,20 @@ function move!(x::Slider, idx::Integer)
     return
 end
 
-export move! # TODO move to AbstractPlotting?
-
 """
-    Button
+    button(text)
 
-TODO add function signatures
-TODO add description
+Creates a button which can be clicked.
+On click, the button increments its `clicks` field by one.
+
+For example:
+
+```julia
+scene = button("click me please")
+lift(scene[end].clicks) do clicks
+    # your function here
+end
+```
 
 ## Theme
 $(ATTRIBUTES)

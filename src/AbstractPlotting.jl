@@ -9,7 +9,7 @@ using StructArrays
 # Text related packages
 using FreeType, FreeTypeAbstraction, UnicodeFun
 using LinearAlgebra, Statistics
-import ImageMagick, FileIO
+import ImageMagick, FileIO, SparseArrays
 import FileIO: save
 using Printf: @sprintf
 
@@ -129,6 +129,7 @@ export textslider
 
 # gui
 export slider, button, playbutton
+export move!
 
 # Raymarching algorithms
 export RaymarchAlgorithm, IsoValue, Absorption, MaximumIntensityProjection, AbsorptionRGBA, IndexedAbsorptionRGBA
