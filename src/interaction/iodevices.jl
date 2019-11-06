@@ -3,6 +3,14 @@ Backend independent enums which
 represent keyboard buttons.
 """
 module Keyboard
+
+    using ..AbstractPlotting: INSTANCES # import the docstring extensions
+    """
+        Keyboard.Button
+
+    Enumerates all keyboard buttons.
+    See the implementation for details.
+    """
     @enum(Button,
             unknown            = -1,
             # printable keys,
@@ -139,13 +147,28 @@ Backend independent enums and fields which
 represent mouse actions.
 """
 module Mouse
+    using ..AbstractPlotting: INSTANCES # import the docstring extensions
 
+    """
+        Mouse.Button
+
+    Enumerates all mouse buttons, in accordance with the GLFW spec.
+
+    $(INSTANCES)
+    """
     @enum Button begin
         left = 0
         middle = 2
         right = 1 # Conform to GLFW
     end
 
+    """
+        Mouse.DragEnum
+
+    Enumerates the drag states of the mouse.
+
+    $(INSTANCES)
+    """
     @enum DragEnum begin
         down
         up
